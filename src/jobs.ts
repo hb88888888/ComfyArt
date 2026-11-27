@@ -76,7 +76,7 @@ export function placeMedia(editor: Editor, m: Media, name: string, x: number, y:
     meta: {},
   } as any])
   const id = createShapeId()
-  editor.createShape({ id, type: m.kind, x, y, ...(parentId ? { parentId } : {}), props: { assetId, w, h: w * m.h / m.w } } as any)
+  editor.createShape({ id, type: m.kind, x, y, ...(parentId ? { parentId } : {}), props: { assetId, w, h: w * m.h / m.w }, meta: { createdAt: Date.now() } } as any)
   return id
 }
 

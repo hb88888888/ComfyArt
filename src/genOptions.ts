@@ -1,5 +1,7 @@
 import { t } from './i18n'
-import { VIDEO_AREAS } from './videoGraphs'
+import { VIDEO_AREAS, DEFAULT_VIDEO_RESOLUTION } from './videoGraphs'
+
+export { DEFAULT_VIDEO_RESOLUTION }
 
 export const RESOLUTIONS = ['1K', '2K', 'custom']
 export const QUALITIES: [string, string][] = [['fast', t('generate.turbo')], ['standard', t('generate.standard')], ['high', t('generate.highQuality')]]
@@ -18,4 +20,6 @@ export const STYLES: [string, string, string][] = [
 export const RATIOS = ['1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '4:5', '5:4', '21:9']
 export const VIDEO_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
 export const DURATIONS = [5, 10, 15]
-export const VIDEO_RESOLUTIONS = Object.keys(VIDEO_AREAS)
+export const DURATION_MIN = 5
+export const DURATION_MAX = 15
+export const VIDEO_RESOLUTIONS = ['360p', '480p', '768p', '1080p'].filter((r) => r in VIDEO_AREAS)

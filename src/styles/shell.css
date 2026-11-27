@@ -188,8 +188,8 @@ button.ca-head__logo:hover, button.ca-head__logo[data-open] { background: var(--
 .ca-assets__grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: max-content; align-content: start; gap: 6px; overflow-y: auto; min-height: 0; }
 .ca-assets__more { grid-column: 1 / -1; height: 1px; }
 
-.ca-gen__refs { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
-.ca-gen__ref { position: relative; width: 56px; height: 56px; }
+.ca-gen__refs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; align-content: flex-start; margin-bottom: 4px; }
+.ca-gen__ref { position: relative; flex: none; width: 56px; height: 56px; }
 .ca-gen__ref img, .ca-gen__ref video { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; }
 .ca-gen__refaudio { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 16px; border-radius: 10px; background: var(--ca-field); color: var(--ca-muted); box-sizing: border-box; }
 .ca-gen__ref button { position: absolute; top: -6px; right: -6px; display: none; width: 18px; height: 18px; padding: 3px; border: none; border-radius: 50%; background: var(--ca-strong); color: var(--ca-float); cursor: pointer; box-sizing: border-box; }
@@ -199,11 +199,107 @@ button.ca-head__logo:hover, button.ca-head__logo[data-open] { background: var(--
 .ca-gen__color > button { position: absolute; top: -4px; right: -4px; display: none; width: 16px; height: 16px; padding: 3px; border: none; border-radius: 50%; background: var(--ca-strong); color: var(--ca-float); cursor: pointer; box-sizing: border-box; z-index: 1; }
 .ca-gen__color > button svg { width: 100%; height: 100%; }
 .ca-gen__color:hover > button { display: inline-flex; }
-.ca-gen__refnum { position: absolute; top: 4px; left: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: rgba(0,0,0,.6); color: #fff; font: 600 10px/16px var(--ca-font); text-align: center; box-sizing: border-box; }
+.ca-gen__refnum { position: absolute; top: 4px; left: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: rgba(0,0,0,.6); color: #fff; font: 600 10px/16px var(--ca-font); text-align: center; white-space: nowrap; box-sizing: border-box; }
 .ca-gen__ref[data-off] img { opacity: .35; filter: grayscale(1); }
-.ca-gen__refadd { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 56px; padding: 0; border: none; border-radius: 10px; background: var(--ca-field); color: var(--ca-muted); font: 400 11px/14px var(--ca-font); cursor: pointer; }
+.ca-gen__refadd { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 56px; padding: 0; border: none; border-radius: 10px; background: var(--ca-field); color: var(--ca-muted); font: 400 11px/14px var(--ca-font); text-align: center; cursor: pointer; }
 .ca-gen__refadd:hover { background: var(--ca-active); }
 .ca-gen__refadd .ca-icon { width: 18px; height: 18px; }
+.ca-gen__slots { align-self: center; margin-left: auto; padding: 0 4px; color: var(--ca-muted); font: 400 11px/14px var(--ca-font); white-space: nowrap; }
+/* 素材多到一张放不下时缩一号，尽量一行装下更多，仍然保持方块不压扁 */
+.ca-gen__refs[data-dense] { gap: 6px; }
+.ca-gen__refs[data-dense] .ca-gen__ref, .ca-gen__refs[data-dense] .ca-gen__refadd { width: 44px; height: 44px; }
+.ca-gen__refs[data-dense] .ca-gen__ref img, .ca-gen__refs[data-dense] .ca-gen__ref video, .ca-gen__refs[data-dense] .ca-gen__refaudio { border-radius: 8px; }
+.ca-gen__refs[data-dense] .ca-gen__refaudio { padding: 10px; }
+.ca-gen__refs[data-dense] .ca-gen__refadd { gap: 1px; font-size: 10px; line-height: 12px; }
+.ca-gen__refs[data-dense] .ca-gen__refadd .ca-icon { width: 15px; height: 15px; }
+.ca-gen__refs[data-dense] .ca-gen__refnum { top: 3px; left: 3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; font-size: 9px; line-height: 14px; }
+
+/* @ 引用素材：编辑器本身是一个 contenteditable，选中的素材是里面的原子 chip
+   （缩略图 + 编号），图片 / 视频 / 音频各一种颜色。文本仍然原样存回字符串。 */
+.ca-ment { position: relative; display: block; }
+.ca-ment__input { display: block; width: 100%; box-sizing: border-box; white-space: pre-wrap; overflow-wrap: anywhere; overflow-y: auto; cursor: text; }
+.ca-ment__input:focus { outline: none; }
+.ca-ment__input[data-empty]::before { content: attr(data-ph); color: var(--ca-muted); pointer-events: none; }
+
+/* Sized in em so the chip always matches the prompt text it sits in (14px in the
+   generator, 13px per shot in the storyboard) instead of outgrowing it. */
+.ca-ment__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .2em;
+  height: calc(1.34em + 4px);
+  margin: 0 .1em;
+  padding: 0 calc(.3em + 4px) 0 calc(.1em + 4px);
+  border-radius: 3px;
+  vertical-align: middle;
+  white-space: nowrap;
+  font: inherit;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  user-select: none;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+.ca-ment__chipimg {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  /* em of the chip's own text (the thumb keeps font-size 1em so width/height resolve
+     against the label size, not a shrunken glyph size). */
+  width: calc(1.06em + 2px);
+  height: calc(1.06em + 2px);
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, .28);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.ca-ment__chipimg[data-glyph]::before { content: attr(data-glyph); font: 700 .68em/1 var(--ca-font); }
+.ca-ment__chiplabel { display: inline-block; }
+.ca-ment__chip[data-kind='image'] { background: rgba(96, 165, 250, .20); box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .45); }
+.ca-ment__chip[data-kind='video'] { background: rgba(167, 139, 250, .22); box-shadow: inset 0 0 0 1px rgba(167, 139, 250, .48); }
+.ca-ment__chip[data-kind='audio'] { background: rgba(52, 211, 153, .20); box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .45); }
+
+/* Long prompts outgrow the box: a grip in each corner of the panel drags the prompt
+   area taller (double click resets). The grips stay invisible until the panel is
+   hovered, so they never add noise next to the thumbnails or the send button. */
+.ca-gen__grip {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  color: var(--ca-text);
+  border-radius: 6px;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity .12s, background-color .12s;
+}
+/* Both axes: height grows upwards, width grows away from the panel edge. */
+.ca-gen__grip[data-corner='bl'] { left: 3px; bottom: 3px; cursor: nesw-resize; }
+.ca-gen__grip[data-corner='br'] { right: 3px; bottom: 3px; cursor: nwse-resize; }
+.ca-gen:hover > .ca-gen__grip { opacity: .5; }
+.ca-gen__grip:hover { opacity: .95; background: rgba(255, 255, 255, .1); }
+.ca-gen__grip::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+}
+.ca-gen__grip[data-corner='bl']::after { left: 3px; bottom: 3px; border-left: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor; border-bottom-left-radius: 3px; }
+.ca-gen__grip[data-corner='br']::after { right: 3px; bottom: 3px; border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor; border-bottom-right-radius: 3px; }
+.ca-ment__pop { z-index: 1200; }
+.ca-ment__menu { width: 250px; max-height: 272px; overflow-y: auto; padding: 6px; }
+.ca-ment__item { display: flex; align-items: center; gap: 10px; width: 100%; height: 46px; padding: 6px 8px; border: none; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; box-sizing: border-box; }
+.ca-ment__item[data-on] { background: var(--ca-active); }
+.ca-ment__thumb { display: flex; flex: none; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 7px; overflow: hidden; background: var(--ca-field); color: var(--ca-muted); }
+.ca-ment__thumb img, .ca-ment__thumb video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ca-ment__thumb .ca-icon { width: 16px; height: 16px; }
+.ca-ment__thumb[data-kind='image'] { box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .5); }
+.ca-ment__thumb[data-kind='video'] { box-shadow: inset 0 0 0 1px rgba(167, 139, 250, .5); }
+.ca-ment__thumb[data-kind='audio'] { box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .5); }
+.ca-ment__text { display: flex; flex-direction: column; min-width: 0; }
+.ca-ment__name { font: 500 13px/17px var(--ca-font); }
+.ca-ment__cap { color: var(--ca-muted); font: 400 11px/14px var(--ca-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .ca-bg__swatches--wrap { flex-wrap: wrap; }
 .ca-doodle { gap: 8px; padding: 0 10px; }

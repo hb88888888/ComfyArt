@@ -1,7 +1,7 @@
 import { atom } from 'tldraw'
 
 import { listUserFiles, readUserJson, writeUserJson, writeUserText, type PromptGraph } from './comfy'
-import { asApiWorkflow, checkWorkflow, CUSTOM_ACTIONS, fillWorkflow, outputOf, parseApiWorkflow, rulesText, specOf, type CustomAction, type CustomValues, type Markers } from './customMarkers'
+import { asApiWorkflow, checkWorkflow, CUSTOM_ACTIONS, filledRefs, fillWorkflow, outputOf, parseApiWorkflow, REF_MARKERS, rulesText, specOf, type CustomAction, type CustomValues, type Markers } from './customMarkers'
 import { t } from './i18n'
 
 const DIR = 'comfyart/workflows'
@@ -10,7 +10,20 @@ const CONFIG = 'comfyart/workflow-config.json'
 export const CUSTOM_GENERATE = 'custom:generate'
 export const CUSTOM_MUSIC = 'custom:music'
 export const CUSTOM_MODEL3D = 'custom:model3d'
+export const CUSTOM_REF_VIDEO = 'custom:refVideo'
 export const workflowConfigAtom = atom<Partial<Record<CustomAction, string>>>('workflow config', {})
+
+/** Every reference-to-video workflow on disk, so the model menu can offer them one by one. */
+export const refVideoFilesAtom = atom<string[]>('ref video files', [])
+export const customRefVideoId = (file: string) => `${CUSTOM_REF_VIDEO}/${file}`
+export const refVideoFileOf = (workflow: string | null | undefined) =>
+  workflow && workflow.startsWith(`${CUSTOM_REF_VIDEO}/`) ? workflow.slice(CUSTOM_REF_VIDEO.length + 1) : null
+/** What a reference-to-video generator really runs: its own pick when it has one, else the assigned default. */
+export function effectiveRefWorkflow(workflow: string | null | undefined): string {
+  if (refVideoFileOf(workflow)) return workflow!
+  const assigned = workflowConfigAtom.get().refVideo
+  return assigned ? customRefVideoId(assigned) : (workflow ?? '')
+}
 
 type Link = [string, number]
 
@@ -18,6 +31,11 @@ export async function loadWorkflowConfig() {
   const config = await readUserJson<Partial<Record<CustomAction, string>>>(CONFIG, {})
   const present = await Promise.all(Object.entries(config).map(async ([action, file]) => (await listCustomWorkflows(action as CustomAction)).includes(file!) && [action, file]))
   workflowConfigAtom.set(Object.fromEntries(present.filter((e) => !!e)))
+  await loadRefVideoFiles()
+}
+
+export async function loadRefVideoFiles() {
+  refVideoFilesAtom.set(await listCustomWorkflows('refVideo'))
 }
 
 export async function setCustomWorkflow(action: CustomAction, file: string | null) {
@@ -26,6 +44,7 @@ export async function setCustomWorkflow(action: CustomAction, file: string | nul
   else delete next[action]
   workflowConfigAtom.set(next)
   await writeUserJson(CONFIG, next)
+  if (action === 'refVideo') await loadRefVideoFiles()
 }
 
 export const listCustomWorkflows = async (action: CustomAction) => (await listUserFiles(`${DIR}/${action}`)).filter((f) => f.endsWith('.json')).sort()
@@ -35,30 +54,50 @@ export const readCustomWorkflow = (action: CustomAction, file: string) => readUs
 export async function saveCustomWorkflow(action: CustomAction, name: string, graph: PromptGraph): Promise<string> {
   const file = name.replace(/[\\/:*?"<>|]/g, '_').replace(/(\.api)?\.json$/i, '') + '.json'
   await writeUserText(`${DIR}/${action}/${file}`, JSON.stringify(graph, null, 2))
+  if (action === 'refVideo') await loadRefVideoFiles()
   return file
 }
 
 export interface CustomBuilt { graph: PromptGraph; result: string }
 type Adapt = (graph: PromptGraph, markers: Markers, result: string) => void
 
-export async function customGraph(action: CustomAction, values: CustomValues, adapt?: Adapt): Promise<CustomBuilt | null> {
-  const file = workflowConfigAtom.get()[action]
+function expandRefs(raw: CustomValues, markers: Markers, file: string): CustomValues {
+  if (!raw.refs) return raw
+  const out: Record<string, unknown> = { ...raw }
+  for (const kind of ['image', 'video', 'audio'] as const) {
+    const list = raw.refs[kind] ?? []
+    const slots = REF_MARKERS[kind].filter((m) => markers[m])
+    if (list.length > slots.length) throw new Error(`${file}: ${t('customWorkflows.tooManyRefs')}`)
+    slots.forEach((m, i) => {
+      if (list[i]) out[m] = list[i]
+    })
+  }
+  delete out.refs
+  return out as CustomValues
+}
+
+export async function customGraph(action: CustomAction, raw: CustomValues, adapt?: Adapt, picked?: string): Promise<CustomBuilt | null> {
+  const file = picked ?? workflowConfigAtom.get()[action]
   if (!file) return null
   const graph = await readCustomWorkflow(action, file)
   if (!graph) return null
   const { markers, errors } = checkWorkflow(graph, action)
   if (errors.length) throw new Error(`${file}: ${errors.join(' ')}`)
+  const values = expandRefs(raw, markers, file)
+  const spec = specOf(action)
   for (const [key, marker] of [['image2', 'image2'], ['last', 'last'], ['image', 'image'], ['base', 'base']] as const) {
     if (values[key] && !markers[marker]) throw new Error(t('customWorkflows.unusedInput', file, `@${marker}`))
   }
-  if (markers.image && !values.image) throw new Error(t('customWorkflows.needsImage', file))
-  const { required, optional } = specOf(action)
+  if (spec.refsOptional) {
+    if (!filledRefs(values).length) throw new Error(t('customWorkflows.needsAnyRef', file))
+  } else if (markers.image && !values.image) throw new Error(t('customWorkflows.needsImage', file))
+  const { required } = spec
   for (const marker of ['video', 'audio', 'front', 'left', 'back', 'right'] as const) {
     if (values[marker] && !markers[marker]) throw new Error(t('customWorkflows.unusedInput', file, `@${marker}`))
-    if (markers[marker] && !values[marker] && [...required, ...optional].includes(marker)) throw new Error(t('customWorkflows.needsInput', file, `@${marker}`))
+    if (markers[marker] && !values[marker] && required.includes(marker)) throw new Error(t('customWorkflows.needsInput', file, `@${marker}`))
   }
   if (values.lyrics && !markers.lyrics) throw new Error(t('customWorkflows.unusedLyrics', file))
-  fillWorkflow(graph, markers, markers.image2 && !values.image2 ? { ...values, image2: values.image } : values)
+  fillWorkflow(graph, markers, spec.refsOptional || !(markers.image2 && !values.image2) ? values : { ...values, image2: values.image })
   const result = outputOf(graph, markers)!
   adapt?.(graph, markers, result)
   return { graph, result }

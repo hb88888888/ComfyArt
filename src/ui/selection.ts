@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { useEditor, useValue, type Box, type TLImageShape, type TLShape } from 'tldraw'
 
 import { GENERATOR, type GeneratorShape } from '../shapes/GeneratorShape'
@@ -30,11 +30,22 @@ export const useSelectedGenerator = () => useOnlySelected<GeneratorShape>(GENERA
 
 export function useElementSize(ref: RefObject<HTMLElement | null>, initial: { w: number; h: number }) {
   const [size, setSize] = useState(initial)
+  const observer = useRef<ResizeObserver | null>(null)
+  const watched = useRef<HTMLElement | null>(null)
+  // Measured on every render *and* whenever the box itself changes size, so a panel
+  // that grows from the inside (a dragged-larger prompt) is repositioned too.
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const [w, h] = [el.offsetWidth, el.offsetHeight]
-    setSize((s) => (s.w === w && s.h === h ? s : { w, h }))
+    const measure = () => setSize((s) => (s.w === el.offsetWidth && s.h === el.offsetHeight ? s : { w: el.offsetWidth, h: el.offsetHeight }))
+    measure()
+    if (watched.current !== el) {
+      observer.current?.disconnect()
+      observer.current = new ResizeObserver(measure)
+      observer.current.observe(el)
+      watched.current = el
+    }
   })
+  useEffect(() => () => { observer.current?.disconnect(); watched.current = null }, [])
   return size
 }

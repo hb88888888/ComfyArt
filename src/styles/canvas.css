@@ -37,11 +37,13 @@
 
 .ca-gen {
   position: absolute;
-  z-index: 300;
+  /* Above the dock (300): when a short window leaves the panel no room to float free it
+     still has to be reachable, and its corner grips must never end up under the dock. */
+  z-index: 340;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 540px;
+  width: 680px;
   max-width: calc(100vw - 32px);
   padding: 12px 8px 8px 16px;
   box-sizing: border-box;
@@ -64,10 +66,10 @@
   color: inherit;
   font: inherit;
   font-size: 14px;
+  line-height: 20px;
 }
-.ca-gen__prompt::placeholder { color: var(--ca-muted); }
 .ca-gen[data-lan] { width: 580px; }
-.ca-gen__foot { display: flex; align-items: center; gap: 6px; margin-left: -8px; }
+.ca-gen__foot { display: flex; align-items: center; gap: 6px; margin-left: -8px; padding-right: 14px; }
 .ca-gen__foot > .ca-pop-anchor { min-width: 0; }
 .ca-gen__spacer { flex: 1; }
 .ca-gen__pill {
@@ -186,6 +188,7 @@
   color: inherit;
   font: inherit;
   font-size: 14px;
+  line-height: 20px;
 }
 .ca-panel__prompt--boxed { min-height: 64px; padding: 8px 10px; border-radius: 8px; background: var(--ca-field); font-size: 13px; }
 .ca-panel__prompt::placeholder, .ca-panel__input::placeholder { color: var(--ca-muted); }
@@ -274,7 +277,37 @@
 .ca-trim__handle[data-end] { margin-left: -10px; border-radius: 0 8px 8px 0; }
 .ca-trim__handle::after { content: ""; position: absolute; left: 5px; top: 16px; bottom: 16px; width: 2px; border-radius: 1px; background: var(--ca-float); }
 .ca-gen-card__where { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); padding: 2px 10px; border-radius: 999px; background: var(--ca-float); color: var(--ca-text); box-shadow: var(--ca-shadow); font-size: 12px; white-space: nowrap; }
-.ca-gen-card__stop { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 10px; border: 0; border-radius: 50%; background: var(--ca-float); color: var(--ca-text); box-shadow: var(--ca-shadow); cursor: pointer; pointer-events: all; }
-.ca-gen-card__stop:hover { color: var(--ca-error-text); }
-.ca-gen-card__stop:disabled { opacity: .5; cursor: default; color: var(--ca-text); }
+.ca-gen-card__stop { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; padding: 14px; border: 0; border-radius: 50%; background: var(--ca-float); color: var(--ca-error-text); box-shadow: var(--ca-shadow); cursor: pointer; pointer-events: all; transition: transform .12s ease, background .12s ease; }
+.ca-gen-card__stop:hover { background: var(--ca-error-text); color: #fff; transform: translate(-50%, -50%) scale(1.08); }
+.ca-gen-card__stop:active { transform: translate(-50%, -50%) scale(.96); }
+.ca-gen-card__stop:disabled { opacity: .5; cursor: default; color: var(--ca-text); background: var(--ca-float); }
 .ca-gen-card__stop svg { width: 100%; height: 100%; }
+
+/* Hover playback is muted because a hover is not a user gesture, so it could not start
+   with sound anyway; this button is the way in (the editing controls have their own). */
+.tl-video-container { position: relative; }
+.tl-video-sound {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .45);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s, background-color .12s;
+  backdrop-filter: blur(6px);
+}
+.tl-video-container:hover .tl-video-sound { opacity: 1; pointer-events: auto; }
+.tl-video-sound:hover { background: rgba(0, 0, 0, .68); }
+.tl-video-sound[data-on] { opacity: 1; pointer-events: auto; background: rgba(0, 0, 0, .6); }
+.tl-video-sound .ca-icon { width: 16px; height: 16px; }

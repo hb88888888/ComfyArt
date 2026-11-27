@@ -1,10 +1,12 @@
 import { DURATIONS } from '../genOptions'
 import type { Scene } from '../videoGraphs'
+import type { Mention } from '../mentions'
 import { Icons } from './icons'
 import { Chips } from './Chips'
+import { MentionTextarea } from './MentionInput'
 import { t } from '../i18n'
 
-export function StoryboardEditor({ scenes, onChange, onSmart, smartBusy }: { scenes: Scene[]; onChange: (scenes: Scene[]) => void; onSmart: () => void; smartBusy: boolean }) {
+export function StoryboardEditor({ scenes, onChange, onSmart, smartBusy, mentions }: { scenes: Scene[]; onChange: (scenes: Scene[]) => void; onSmart: () => void; smartBusy: boolean; mentions: Mention[] }) {
   const total = scenes.reduce((n, s) => n + s.duration, 0)
   const set = (i: number, patch: Partial<Scene>) => onChange(scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)))
   return (
@@ -16,12 +18,12 @@ export function StoryboardEditor({ scenes, onChange, onSmart, smartBusy }: { sce
             <Chips value={s.duration} options={DURATIONS.map((d) => [d, `${d}s`] as const)} onPick={(d) => set(i, { duration: d })} />
             {scenes.length > 1 && <button type="button" className="ca-history__del" title={t('common.delete')} onClick={() => onChange(scenes.filter((_, j) => j !== i))}>{Icons.trash}</button>}
           </div>
-          <textarea
+          <MentionTextarea
             className="ca-story__prompt"
             value={s.prompt}
+            mentions={mentions}
             placeholder={t('storyboardEditor.describeThisScene')}
-            onChange={(e) => set(i, { prompt: e.target.value })}
-            onKeyDown={(e) => e.stopPropagation()}
+            onChange={(next) => set(i, { prompt: next })}
           />
         </div>
       ))}

@@ -9,8 +9,9 @@ import { LAYOUT_HANDLERS, shapeOf, type Args, type Handler } from './botLayout'
 import { placeInChatFrame } from './chatFrame'
 import { capRefs, createGenerator, generate } from './generate'
 import { CUSTOM_MODEL3D, customWorkflowCommand } from './customWorkflows'
-import { DURATIONS, RATIOS, VIDEO_RATIOS } from './genOptions'
-import { MAX_VIDEO_REF_KINDS, VIDEO_TARGETS } from './videoGraphs'
+import { DURATION_MAX, DURATION_MIN, DURATIONS, RATIOS, VIDEO_RATIOS } from './genOptions'
+import { VIDEO_TARGETS } from './videoGraphs'
+import { videoRefSlots } from './refSlots'
 import { type ErrorSink, errorText, fileSrc, GAP, resultsAtom } from './jobs'
 import { agentModels } from './models'
 import { modesFor } from './refModes'
@@ -115,7 +116,7 @@ function startGenerator(editor: Editor, video: boolean, args: Args, onError: Err
   const ratios = video ? VIDEO_RATIOS : RATIOS
   if (args.ratio && !ratios.includes(args.ratio)) throw new Error(`ratio must be one of ${ratios.join(', ')}`)
   const props = video
-    ? { prompt: String(args.prompt), workflow: model.id, ratio: args.ratio ?? ratios[0], duration: DURATIONS.includes(args.duration) ? args.duration : DURATIONS[0] }
+    ? { prompt: String(args.prompt), workflow: model.id, ratio: args.ratio ?? ratios[0], duration: Math.min(DURATION_MAX, Math.max(DURATION_MIN, Math.round(Number(args.duration) || DURATION_MIN))) }
     : { prompt: String(args.prompt), workflow: model.id, ratio: args.ratio ?? '1:1', count: Math.min(4, Math.max(1, Number(args.count) || 1)) }
   const media = video ? [...refUrls(editor, args.reference_images), ...refUrls(editor, args.reference_videos), ...refUrls(editor, args.reference_audios)] : []
   const motion = video && args.motion_video ? refUrls(editor, [args.motion_video])[0] : null
@@ -182,11 +183,14 @@ function waitResults(editor: Editor, ids: string[], timeout: number) {
 
 const HANDLERS: Record<string, Handler> = {
   ...LAYOUT_HANDLERS,
-  list_models: () => ({
-    image: agentModels(false).map((m) => ({ id: m.id, label: m.label, desc: m.desc, accepts_refs: !!m.refs, ratios: RATIOS })),
-    video: agentModels(true).map((m) => ({ id: m.id, label: m.label, desc: m.desc, accepts_first_frame: true, max_reference_images: MAX_VIDEO_REF_KINDS.image, max_reference_videos: MAX_VIDEO_REF_KINDS.video, max_reference_audios: MAX_VIDEO_REF_KINDS.audio, motion_control: true, lip_sync: true, ratios: VIDEO_RATIOS, durations: DURATIONS })),
-    music: musicModels(),
-  }),
+  list_models: () => {
+    const slots = videoRefSlots()
+    return {
+      image: agentModels(false).map((m) => ({ id: m.id, label: m.label, desc: m.desc, accepts_refs: !!m.refs, ratios: RATIOS })),
+      video: agentModels(true).map((m) => ({ id: m.id, label: m.label, desc: m.desc, accepts_first_frame: true, max_reference_images: slots.image, max_reference_videos: slots.video, max_reference_audios: slots.audio, motion_control: true, lip_sync: true, ratios: VIDEO_RATIOS, durations: DURATIONS })),
+      music: musicModels(),
+    }
+  },
   generate_image: (editor, args, onError, chat) => startGenerator(editor, false, args, onError, chat),
   generate_video: (editor, args, onError, chat) => startGenerator(editor, true, args, onError, chat),
   edit_video: (editor, args, onError) => {

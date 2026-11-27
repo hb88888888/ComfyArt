@@ -1,7 +1,7 @@
 import { atom } from 'tldraw'
 
 import { api, cloudMode, defaultTarget, lanMode, loadModelPaths, readUserJson, writeUserJson } from './comfy'
-import { CUSTOM_GENERATE, workflowConfigAtom } from './customWorkflows'
+import { CUSTOM_GENERATE, customRefVideoId, refVideoFileOf, refVideoFilesAtom, workflowConfigAtom } from './customWorkflows'
 import { t } from './i18n'
 import { lanHas } from './instances'
 
@@ -66,13 +66,25 @@ export const VIDEO_MODELS: ModelDef[] = [
   { id: 't2v-minimax-h3.api.json', label: 'MiniMax H3', desc: t('models.syncedAudioAndVideoSupports'), files: ['minimax_h3_fl2va_pruned_int8_convrot.safetensors'], video: true },
 ]
 
-export const isVideo = (workflow: string) => VIDEO_MODELS.some((m) => m.id === workflow)
+export const isVideo = (workflow: string) => VIDEO_MODELS.some((m) => m.id === workflow) || !!refVideoFileOf(workflow)
 function customModels(): ModelDef[] {
   const file = workflowConfigAtom.get().generate
   return file ? [{ id: CUSTOM_GENERATE, label: file.replace(/\.json$/, ''), desc: t('customWorkflows.customModelDesc'), files: [], lora: null, refs: 'custom' }] : []
 }
+/** One entry per custom reference-to-video workflow, so the model menu can switch between them. */
+function customVideoModels(): ModelDef[] {
+  return refVideoFilesAtom.get().map((file) => ({
+    id: customRefVideoId(file), label: file.replace(/\.json$/, ''), desc: t('customWorkflows.customVideoModelDesc'), files: [], video: true, lora: null,
+  }))
+}
 
-export const modelOf = (workflow: string) => [...IMAGE_MODELS, ...VIDEO_MODELS, ...customModels()].find((m) => m.id === workflow)
+export const modelOf = (workflow: string): ModelDef | undefined => {
+  const found = [...IMAGE_MODELS, ...VIDEO_MODELS, ...customModels(), ...customVideoModels()].find((m) => m.id === workflow)
+  if (found) return found
+  // A generator can still point at a custom workflow before the file list has loaded.
+  const file = refVideoFileOf(workflow)
+  return file ? { id: workflow, label: file.replace(/\.json$/, ''), desc: t('customWorkflows.customVideoModelDesc'), files: [], video: true, lora: null } : undefined
+}
 
 export interface ModelPrefs { auto: boolean; enabled: string[] }
 
@@ -94,9 +106,14 @@ export async function saveModelPrefs(prefs: ModelPrefs) {
   await writeUserJson(FILE, prefs)
 }
 
-export function installedModels(video: boolean): ModelDef[] {
+export function installedModels(video: boolean, withRefVideo = false): ModelDef[] {
   const builtin = (video ? VIDEO_MODELS : IMAGE_MODELS).filter((m) => isInstalled(m.id))
-  return video ? builtin : [...builtin, ...customModels()]
+  if (!video) return [...builtin, ...customModels()]
+  if (!withRefVideo) return builtin
+  const custom = customVideoModels()
+  // With a reference-to-video workflow assigned, the menu offers the custom ones only: the assigned
+  // one already stands in for the built-in model, so listing both would be misleading.
+  return workflowConfigAtom.get().refVideo && custom.length ? custom : [...builtin, ...custom]
 }
 
 export function agentModels(video: boolean): ModelDef[] {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { defaultHandleExternalFileContent, useEditor, useToasts, useTranslation, type Editor, type TLShape } from 'tldraw'
 
+import { MAX_ASSET_SIZE } from '../comfy'
 import { placeEmbed } from '../embeds'
 import { errorText } from '../jobs'
 import { isPdf, placePdf } from '../pdf'
@@ -49,7 +50,7 @@ export function DropHandlers({ onError }: { onError: (msg: string) => void }) {
       }
       if (!rest.length) return
       const before = new Set(editor.getCurrentPageShapeIds())
-      await defaultHandleExternalFileContent(editor, { point, files: rest }, { toasts, msg })
+      await defaultHandleExternalFileContent(editor, { point, files: rest }, { toasts, msg, maxAssetSize: MAX_ASSET_SIZE })
       const added = editor.getCurrentPageShapes().filter((s) => !before.has(s.id) && s.parentId === editor.getCurrentPageId())
       if (added.length > 1) lineUp(editor, added)
     })

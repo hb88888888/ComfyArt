@@ -4,6 +4,14 @@ import { CLIENT_ID, onComfyEvent } from './ws'
 
 const POLL_MS = 1500
 
+/**
+ * Ceiling for files dropped or pasted onto the canvas. tldraw ships a 10 MB default
+ * (`DEFAULT_MAX_ASSET_SIZE`), which is far below what ComfyUI itself accepts
+ * (`--max-upload-size`, 100 MB by default), so photos straight out of a camera were
+ * rejected before they ever reached the backend.
+ */
+export const MAX_ASSET_SIZE = 50 * 1024 * 1024
+
 export type PromptGraph = Record<string, { class_type: string; inputs: Record<string, unknown>; _meta?: { title?: string } }>
 
 export interface ImageRef { filename: string; subfolder: string; type: string; metadata?: { width?: number; height?: number } }

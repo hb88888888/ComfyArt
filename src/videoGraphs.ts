@@ -1,7 +1,7 @@
 import { loadNamed, type PromptGraph, type RefKind } from './comfy'
-import { customGraph, customStoryboard, resizeVideoTo } from './customWorkflows'
-import { t } from './i18n'
+import { customGraph, customStoryboard, resizeVideoTo, refVideoFileOf } from './customWorkflows'
 import { randomSeed, type Built } from './workflows'
+import { t } from './i18n'
 
 export const VIDEO_TARGETS: [string, number][] = [['1080p', 1920], ['2K', 2560], ['4K', 3840]]
 const even = (v: number) => Math.round(v / 2) * 2
@@ -40,8 +40,10 @@ export async function upscaleVideoGraph(video: string, w: number, h: number, lon
 }
 
 const snap32 = (v: number) => Math.max(32, Math.round(v / 32) * 32)
-export const VIDEO_AREAS: Record<string, number> = { '768p': 1344 * 768, '1080p': 1920 * 1088 }
-const H3_AREA = VIDEO_AREAS['768p']
+// Draft tiers first: 360p / 480p are the sizes the H3 two-step draft workflows are tuned for.
+export const VIDEO_AREAS: Record<string, number> = { '360p': 360 * 640, '480p': 480 * 864, '768p': 1344 * 768, '1080p': 1920 * 1088 }
+export const DEFAULT_VIDEO_RESOLUTION = '768p'
+const H3_AREA = VIDEO_AREAS[DEFAULT_VIDEO_RESOLUTION]
 
 export function videoSize(aspect: number, area = H3_AREA): [number, number] {
   return [snap32(Math.sqrt(area * aspect)), snap32(Math.sqrt(area / aspect))]
@@ -127,16 +129,19 @@ async function r2v(refs: MediaRef[], prompt: string, aspect: number, duration: n
   return { g, id }
 }
 
-export async function r2vGraph(refs: MediaRef[], prompt: string, aspect: number, duration: number, area: number): Promise<Built> {
+export async function r2vGraph(refs: MediaRef[], prompt: string, aspect: number, duration: number, area: number, workflow?: string): Promise<Built> {
   const files = (kind: RefKind) => refs.filter((r) => r.kind === kind).map((r) => r.file)
-  const [image, image2, ...moreImages] = files('image')
-  const [video, ...moreVideos] = files('video')
-  const [audio, ...moreAudios] = files('audio')
   const [width, height] = videoSize(aspect, area)
-  const custom = await customGraph('refVideo', { image, image2, video, audio, prompt, width, height, seconds: duration }, () => {
-    if (moreImages.length || moreVideos.length || moreAudios.length) throw new Error(t('customWorkflows.tooManyRefs'))
-  })
+  const file = refVideoFileOf(workflow)
+  const custom = await customGraph('refVideo', {
+    prompt,
+    width,
+    height,
+    seconds: duration,
+    refs: { image: files('image'), video: files('video'), audio: files('audio') },
+  }, undefined, file ?? undefined)
   if (custom) return custom
+  if (file) throw new Error(t('customWorkflows.refVideoGone', file))
   const { g, id } = await r2v(refs, prompt, aspect, duration, area)
   return { graph: g, result: id.save }
 }

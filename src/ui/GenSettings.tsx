@@ -3,7 +3,7 @@ import { useValue } from 'tldraw'
 
 import { settingsAtom } from '../bot'
 import { defaultTarget } from '../comfy'
-import { DURATIONS, QUALITIES, RATIOS, RESOLUTIONS, SHOTS, STYLES, VIDEO_RATIOS, VIDEO_RESOLUTIONS } from '../genOptions'
+import { DEFAULT_VIDEO_RESOLUTION, DURATION_MAX, DURATION_MIN, QUALITIES, RATIOS, RESOLUTIONS, SHOTS, STYLES, VIDEO_RATIOS, VIDEO_RESOLUTIONS } from '../genOptions'
 import { instancesAtom, instanceStatusAtom, targetOptions } from '../instances'
 import { isInstalled, type ModelDef } from '../models'
 import type { GeneratorShape } from '../shapes/GeneratorShape'
@@ -34,7 +34,7 @@ function RatioShape({ ratio }: { ratio: string }) {
 }
 
 export function settingsSummary(p: GeneratorShape['props'], video: boolean) {
-  if (video) return `${p.ratio} · ${p.duration}s · ${VIDEO_RESOLUTIONS.includes(p.resolution) ? p.resolution : VIDEO_RESOLUTIONS[0]}${p.style ? ` · ${SHOTS.find(([k]) => k === p.style)?.[1]}` : ''}`
+  if (video) return `${p.ratio} · ${p.duration}s · ${VIDEO_RESOLUTIONS.includes(p.resolution) ? p.resolution : DEFAULT_VIDEO_RESOLUTION}${p.style ? ` · ${SHOTS.find(([k]) => k === p.style)?.[1]}` : ''}`
   const size = p.resolution === 'custom' ? `${p.cw}×${p.ch}` : `${p.resolution} · ${p.ratio}`
   return t('genSettings.summary', size, p.count, p.transparent ? t('genSettings.transparent') : '')
 }
@@ -129,12 +129,18 @@ export function GenSettings({ p, video, quality, update }: { p: GeneratorShape['
       {video && (
         <>
           <div className="ca-gen__label">{t('genSettings.resolution')}</div>
-          <Chips value={VIDEO_RESOLUTIONS.includes(p.resolution) ? p.resolution : VIDEO_RESOLUTIONS[0]} options={VIDEO_RESOLUTIONS.map((r) => [r, r] as [string, string])} onPick={(r) => update({ resolution: r })} gen />
+          <Chips value={VIDEO_RESOLUTIONS.includes(p.resolution) ? p.resolution : DEFAULT_VIDEO_RESOLUTION} options={VIDEO_RESOLUTIONS.map((r) => [r, r] as [string, string])} onPick={(r) => update({ resolution: r })} gen />
         </>
       )}
       <div className="ca-gen__label">{video ? t('common.duration') : t('genSettings.count')}</div>
       {video
-        ? <Chips value={p.duration} options={DURATIONS.map((d) => [d, `${d}s`] as [number, string])} onPick={(d) => update({ duration: d })} gen />
+        ? (
+          <label className="ca-panel__row ca-gen__slider">
+            <span>{DURATION_MIN}s</span>
+            <input type="range" min={DURATION_MIN} max={DURATION_MAX} step={1} value={p.duration} onChange={(e) => update({ duration: Number(e.target.value) })} />
+            <span className="ca-panel__val">{p.duration}s</span>
+          </label>
+        )
         : <Chips value={p.count} options={COUNTS.map((n) => [n, String(n)] as [number, string])} onPick={(n) => update({ count: n })} gen />}
       {video && (
         <>

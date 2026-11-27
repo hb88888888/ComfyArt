@@ -1,12 +1,14 @@
 import { titleTags, type PromptGraph } from './comfy'
 import { t } from './i18n'
 
+type Link = [string, number]
+
 export type CustomAction = 'generate' | 'edit' | 'style' | 'inpaint' | 'expand' | 'upscale' | 'cutout' | 'erase' | 'angles' | 'layers' | 'video' | 'animate' | 'creativeUpscale' | 'refVideo' | 'motion' | 'lipsync' | 'extend' | 'videoUpscale' | 'videoCutout' | 'model3d' | 'views' | 'music' | 'speech' | 'clone' | 'sfx'
-export type Marker = 'image' | 'image2' | 'base' | 'front' | 'left' | 'back' | 'right' | 'mask' | 'last' | 'video' | 'audio' | 'prompt' | 'lyrics' | 'size' | 'width' | 'height' | 'count' | 'seconds' | 'strength' | 'unet' | 'save'
+export type Marker = 'image' | 'image2' | 'image3' | 'image4' | 'image5' | 'image6' | 'image7' | 'image8' | 'image9' | 'base' | 'front' | 'left' | 'back' | 'right' | 'mask' | 'last' | 'video' | 'video2' | 'video3' | 'audio' | 'audio2' | 'audio3' | 'prompt' | 'lyrics' | 'size' | 'width' | 'height' | 'count' | 'seconds' | 'strength' | 'unet' | 'save'
 
 export type CustomGroup = 'image' | 'edit' | 'tools' | 'video' | 'model' | 'audio'
 
-interface ActionSpec { id: CustomAction; group: CustomGroup; required: Marker[]; optional: Marker[]; needsImages?: boolean; needsFrames?: boolean; note: string }
+interface ActionSpec { id: CustomAction; group: CustomGroup; required: Marker[]; optional: Marker[]; needsImages?: boolean; needsFrames?: boolean; refsOptional?: boolean; note: string }
 
 export const CUSTOM_ACTIONS: ActionSpec[] = [
   { id: 'generate', group: 'image', required: ['prompt', 'size'], optional: ['count', 'unet', 'image', 'image2', 'base', 'strength'], note: 'Text to image. Shows up as an extra model in the image generator. @image and @image2 receive the first two reference images; a workflow with @image needs a reference to run, and @image2 gets the first one when only one is given. @base receives the base image and @strength its strength from 0.1 to 1 (for example a denoise input). A base image given to a workflow with no @base is an error. Transparent output is added by ComfyArt after @save, so @save needs an images input. LoRAs picked under Advanced need @unet.' },
@@ -22,7 +24,7 @@ export const CUSTOM_ACTIONS: ActionSpec[] = [
   { id: 'layers', group: 'tools', required: ['image'], optional: ['prompt', 'count'], note: '@count receives the number of layers. The result is several RGBA images.' },
   { id: 'video', group: 'video', required: ['prompt', 'size'], optional: ['image', 'last', 'seconds'], note: 'Replaces the built-in model in the video generator\'s first/last frame mode and in the storyboard. A first or last frame given to a workflow without @image / @last is an error. In a storyboard each scene runs the workflow once and the clips are joined, so @save needs a video input. With @image, each scene starts from the last frame of the one before and the first scene needs a first frame; without @image the scenes are independent.' },
   { id: 'animate', group: 'video', required: ['image', 'prompt'], optional: ['size', 'seconds', 'last'], note: 'Animate an image into a short clip. With loop on, @last receives the source image again so the clip ends where it starts.' },
-  { id: 'refVideo', group: 'video', required: ['prompt'], optional: ['image', 'image2', 'video', 'audio', 'size', 'seconds'], note: 'Reference to video. Takes up to two images, one video and one audio; @prompt receives the text as written. A marked input with no reference, or a reference with no marker, is an error, except that @image2 gets the first image when only one is given.' },
+  { id: 'refVideo', group: 'video', required: ['prompt'], optional: ['image', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'image8', 'image9', 'video', 'video2', 'video3', 'audio', 'audio2', 'audio3', 'size', 'seconds'], refsOptional: true, note: 'Reference to video. Takes up to nine images, three videos and three audios, each on its own marker (@image, @image2 ... @image9; @video, @video2, @video3; @audio, @audio2, @audio3); @prompt receives the text as written. At least one reference of any kind is needed to run; every marker left without a reference is skipped and its loader is dropped from the graph, so a workflow may offer more slots than the user fills. A reference given to a workflow with no matching marker is an error.' },
   { id: 'motion', group: 'video', required: ['image', 'video', 'prompt'], optional: ['size', 'seconds'], note: 'Motion control. @image receives the character and @video the motion video.' },
   { id: 'lipsync', group: 'video', required: ['image', 'audio', 'prompt'], optional: ['size', 'seconds'], note: 'Lip sync. @image receives the portrait and @audio the speech. @seconds receives the length of the audio.' },
   { id: 'extend', group: 'video', required: ['video', 'prompt'], optional: ['seconds'], note: 'Extend a video. @video receives the source and @seconds the length to add. The result is placed as a new video, so it should hold the original plus the new part.' },
@@ -39,6 +41,13 @@ export const CUSTOM_ACTIONS: ActionSpec[] = [
 export const MARKERS: { id: Marker; fill: string }[] = [
   { id: 'image', fill: 'Load Image (LoadImage or LoadImageMask): the input image' },
   { id: 'image2', fill: 'Load Image: a second image' },
+  { id: 'image3', fill: 'Load Image: a third image' },
+  { id: 'image4', fill: 'Load Image: a fourth image' },
+  { id: 'image5', fill: 'Load Image: a fifth image' },
+  { id: 'image6', fill: 'Load Image: a sixth image' },
+  { id: 'image7', fill: 'Load Image: a seventh image' },
+  { id: 'image8', fill: 'Load Image: an eighth image' },
+  { id: 'image9', fill: 'Load Image: a ninth image' },
   { id: 'base', fill: 'Load Image: the base image of an image-to-image run' },
   { id: 'front', fill: 'Load Image: the front view of an object' },
   { id: 'left', fill: 'Load Image: the left view of an object' },
@@ -47,7 +56,11 @@ export const MARKERS: { id: Marker; fill: string }[] = [
   { id: 'mask', fill: 'LoadImageMask (channel is set to alpha) or LoadImage (use its MASK output): white = area to change' },
   { id: 'last', fill: 'Load Image: the last frame of a video' },
   { id: 'video', fill: 'Load Video: the input video' },
+  { id: 'video2', fill: 'Load Video: a second video' },
+  { id: 'video3', fill: 'Load Video: a third video' },
   { id: 'audio', fill: 'Load Audio: the input recording' },
+  { id: 'audio2', fill: 'Load Audio: a second recording' },
+  { id: 'audio3', fill: 'Load Audio: a third recording' },
   { id: 'prompt', fill: 'a node holding the text as a widget, e.g. CLIPTextEncode (text), TextEncodeQwenImageEdit (prompt), String (Multiline) (value)' },
   { id: 'lyrics', fill: 'a node holding the lyrics as a widget, e.g. YuE2GenerateMusic or MiniMaxMusic3TextEncode (lyrics), String (Multiline) (value)' },
   { id: 'size', fill: 'a node with width and height widgets, e.g. EmptyLatentImage; its batch_size also gets the image count when there is no @count' },
@@ -61,7 +74,12 @@ export const MARKERS: { id: Marker; fill: string }[] = [
 ]
 
 const LOADERS = ['LoadImage', 'LoadImageMask']
-const IMAGE_MARKERS: Marker[] = ['image', 'image2', 'base', 'front', 'left', 'back', 'right', 'mask', 'last']
+const IMAGE_MARKERS: Marker[] = ['image', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'image8', 'image9', 'base', 'front', 'left', 'back', 'right', 'mask', 'last']
+export const REF_MARKERS: Record<'image' | 'video' | 'audio', Marker[]> = {
+  image: ['image', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'image8', 'image9'],
+  video: ['video', 'video2', 'video3'],
+  audio: ['audio', 'audio2', 'audio3'],
+}
 const TEXT_KEYS = ['text', 'prompt', 'value', 'string', 'tags', 'caption', 'style', 'target_text']
 const LYRICS_KEYS = ['lyrics', 'value', 'text', 'string']
 const NUMBER_KEYS: Partial<Record<Marker, string[]>> = {
@@ -124,8 +142,8 @@ function numberKey(node: PromptGraph[string], marker: Marker): string | null {
 function fillProblem(graph: PromptGraph, id: string, marker: Marker): string | null {
   const node = graph[id]
   if (IMAGE_MARKERS.includes(marker)) return LOADERS.includes(node.class_type) ? null : t('customWorkflows.needsLoader', `@${marker}`, label(graph, id))
-  if (marker === 'video') return node.class_type === 'LoadVideo' ? null : t('customWorkflows.needsVideoLoader', label(graph, id))
-  if (marker === 'audio') return node.class_type === 'LoadAudio' ? null : t('customWorkflows.needsAudioLoader', label(graph, id))
+  if (marker.startsWith('video')) return node.class_type === 'LoadVideo' ? null : t('customWorkflows.needsVideoLoader', label(graph, id))
+  if (marker.startsWith('audio')) return node.class_type === 'LoadAudio' ? null : t('customWorkflows.needsAudioLoader', label(graph, id))
   if (marker === 'prompt') return textKey(node) ? null : t('customWorkflows.noTextWidget', label(graph, id))
   if (marker === 'lyrics') return textKey(node, LYRICS_KEYS) ? null : t('customWorkflows.noTextWidget', label(graph, id))
   if (marker === 'size') return ['width', 'height'].every((k) => typeof node.inputs[k] === 'number') ? null : t('customWorkflows.noSizeWidgets', label(graph, id))
@@ -166,7 +184,84 @@ export function checkWorkflow(graph: PromptGraph, action: CustomAction): Check {
   return { markers, errors, warnings }
 }
 
-export interface CustomValues { image?: string; image2?: string; base?: string; front?: string; left?: string; back?: string; right?: string; strength?: number; mask?: string; last?: string; video?: string; audio?: string; prompt?: string; lyrics?: string; width?: number; height?: number; count?: number; seconds?: number }
+export interface RefLists { image?: string[]; video?: string[]; audio?: string[] }
+
+export interface CustomValues { image?: string; image2?: string; image3?: string; image4?: string; image5?: string; image6?: string; image7?: string; image8?: string; image9?: string; base?: string; front?: string; left?: string; back?: string; right?: string; strength?: number; mask?: string; last?: string; video?: string; video2?: string; video3?: string; audio?: string; audio2?: string; audio3?: string; prompt?: string; lyrics?: string; width?: number; height?: number; count?: number; seconds?: number; refs?: RefLists }
+
+export const filledRefs = (values: CustomValues) => (['image', 'video', 'audio'] as const).flatMap((kind) => REF_MARKERS[kind]).filter((m) => !!(values as Record<string, unknown>)[m])
+
+
+const REF_GROUP = { image: 'ref_images.ref_image_', video: 'ref_videos.ref_video_', vaudio: 'ref_video_audios.ref_video_audio_', audio: 'ref_audios.ref_audio_' }
+
+function refIndexOf(marker: string, kind: 'image' | 'video' | 'audio') {
+  if (marker === kind) return 0
+  const n = Number(marker.slice(kind.length))
+  return Number.isInteger(n) && n > 1 ? n - 1 : -1
+}
+
+/** 参考生视频的模型（H3 这类）把参考放在 ref_images. / ref_videos. / ref_audios. 三组可选输入里。
+ *  工作流为了让「不填视频音频也能跑」把这些线摘掉了，所以填了参考之后这里负责接回去。
+ *  已经连好的不动，节点不吃这组输入的直接跳过。 */
+function wireRefs(graph: PromptGraph, markers: Markers, values: CustomValues) {
+  const target = Object.values(graph).find((node) => Object.keys(node.inputs).some((k) => k.startsWith(REF_GROUP.image)))
+  if (!target) return
+  const wired = (key: string) => Array.isArray(target.inputs[key])
+  const splitterOf = (id: string) =>
+    Object.entries(graph).find(([, node]) => node.class_type === 'GetVideoComponents' && Array.isArray(node.inputs.video) && (node.inputs.video as unknown[])[0] === id)?.[0]
+  for (const kind of ['image', 'video', 'audio'] as const) {
+    for (const marker of REF_MARKERS[kind]) {
+      const id = markers[marker]
+      if (!id || !graph[id] || !(values as Record<string, unknown>)[marker]) continue
+      const index = refIndexOf(marker, kind)
+      if (index < 0) continue
+      if (kind === 'video') {
+        const split = splitterOf(id)
+        if (!wired(REF_GROUP.video + index)) target.inputs[REF_GROUP.video + index] = [split ?? id, 0] as Link
+        if (split && !wired(REF_GROUP.vaudio + index)) target.inputs[REF_GROUP.vaudio + index] = [split, 1] as Link
+      } else if (!wired(REF_GROUP[kind] + index)) {
+        target.inputs[REF_GROUP[kind] + index] = [id, 0] as Link
+      }
+    }
+  }
+}
+
+function dropUnfilledRefs(graph: PromptGraph, markers: Markers, values: CustomValues) {
+  const dropped = new Set<string>()
+  for (const kind of ['image', 'video', 'audio'] as const) {
+    for (const m of REF_MARKERS[kind]) {
+      const id = markers[m]
+      if (id && graph[id] && !(values as Record<string, unknown>)[m]) dropped.add(id)
+    }
+  }
+  if (!dropped.size) return
+  const root = outputOf(graph, markers)
+  const tainted = new Set(dropped)
+  for (let changed = true; changed; ) {
+    changed = false
+    for (const [id, node] of Object.entries(graph)) {
+      if (tainted.has(id) || id === root) continue
+      const parents = Object.values(node.inputs).filter((v): v is Link => Array.isArray(v) && typeof v[0] === 'string').map((v) => v[0])
+      if (parents.length && parents.every((p) => tainted.has(p))) {
+        tainted.add(id)
+        changed = true
+      }
+    }
+  }
+  for (const node of Object.values(graph)) {
+    for (const [k, v] of Object.entries(node.inputs)) {
+      if (Array.isArray(v) && typeof v[0] === 'string' && tainted.has(v[0])) delete node.inputs[k]
+    }
+  }
+  if (!root) return
+  const keep = new Set<string>()
+  const walk = (id: string) => {
+    if (keep.has(id) || !graph[id]) return
+    keep.add(id)
+    for (const v of Object.values(graph[id].inputs)) if (Array.isArray(v) && typeof v[0] === 'string') walk(v[0])
+  }
+  walk(root)
+  for (const id of Object.keys(graph)) if (!keep.has(id)) delete graph[id]
+}
 
 export function fillWorkflow(graph: PromptGraph, markers: Markers, values: CustomValues) {
   for (const [marker, id] of Object.entries(markers) as [Marker, string][]) {
@@ -176,8 +271,8 @@ export function fillWorkflow(graph: PromptGraph, markers: Markers, values: Custo
     if (IMAGE_MARKERS.includes(marker)) {
       node.inputs.image = value
       if (node.class_type === 'LoadImageMask') node.inputs.channel = 'alpha'
-    } else if (marker === 'video') node.inputs.file = value
-    else if (marker === 'audio') node.inputs.audio = value
+    } else if (marker.startsWith('video')) node.inputs.file = value
+    else if (marker.startsWith('audio')) node.inputs.audio = value
     else if (marker === 'lyrics') node.inputs[textKey(node, LYRICS_KEYS)!] = value || NO_LYRICS
     else node.inputs[marker === 'prompt' ? textKey(node)! : numberKey(node, marker)!] = value
   }
@@ -186,6 +281,8 @@ export function fillWorkflow(graph: PromptGraph, markers: Markers, values: Custo
     Object.assign(size, { width: values.width, height: values.height })
     if (values.count && typeof size.batch_size === 'number' && !markers.count) size.batch_size = values.count
   }
+  wireRefs(graph, markers, values)
+  dropUnfilledRefs(graph, markers, values)
   for (const node of Object.values(graph)) {
     for (const k of ['seed', 'noise_seed']) if (typeof node.inputs[k] === 'number') node.inputs[k] = Math.floor(Math.random() * 2 ** 31)
   }

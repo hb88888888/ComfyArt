@@ -11,16 +11,19 @@ import { t } from './i18n'
 import { applyRefs, PALETTE_MODE, refControlsOf, refHints, refLimit, refModesOf, refStrengthsOf, usableRefs } from './refModes'
 import { paletteImage, palettePrompt } from './palette'
 import { annotated, randomSeed, type Built } from './workflows'
-import { imageToVideoGraph, lipSyncGraph, MAX_VIDEO_REF_KINDS, motionGraph, r2vGraph, storyboardGraph, t2vGraph, VIDEO_AREAS, videoSize, type Scene } from './videoGraphs'
+import { imageToVideoGraph, lipSyncGraph, motionGraph, r2vGraph, storyboardGraph, t2vGraph, VIDEO_AREAS, videoSize, type Scene } from './videoGraphs'
+import { refSlotsFor } from './refSlots'
+import { stripMentions } from './mentions'
 import { SHOTS, STYLES, VIDEO_RATIOS } from './genOptions'
 
 export function scenesOf(shape: GeneratorShape): Scene[] {
   return (shape.meta.scenes as Scene[] | undefined) ?? []
 }
 
-export function capRefs(srcs: string[]): string[] {
+export function capRefs(srcs: string[], workflow?: string): string[] {
+  const slots = refSlotsFor(workflow)
   const count: Record<RefKind, number> = { image: 0, video: 0, audio: 0 }
-  return srcs.filter((src) => count[refKind(src)]++ < MAX_VIDEO_REF_KINDS[refKind(src)])
+  return srcs.filter((src) => count[refKind(src)]++ < slots[refKind(src)])
 }
 
 const H3_MAX_SECONDS = 3600 / 24
@@ -128,28 +131,32 @@ async function generateGraph(shape: GeneratorShape): Promise<Built> {
   const used = palette ? [...picked, { src: palette, mode: PALETTE_MODE }] : picked
   const hints = refHints(used)
   const prompt = [
-    [shape.props.prompt, suffix, transparent && 'isolated subject on a plain white background'].filter(Boolean).join(', '),
+    [stripMentions(shape.props.prompt), suffix, transparent && 'isolated subject on a plain white background'].filter(Boolean).join(', '),
     ...hints,
     colors.length > 0 && palettePrompt(colors),
   ].filter(Boolean).join(' ')
   if (isVideo(workflow)) {
     const area = VIDEO_AREAS[shape.props.resolution] ?? VIDEO_AREAS['768p']
     const scenes = scenesOf(shape).filter((sc) => sc.prompt.trim())
+    const vrefs = capRefs(refs, workflow)
     if (scenes.length) {
-      return storyboardGraph(scenes.map((sc) => ({ ...sc, prompt: [sc.prompt, suffix].filter(Boolean).join(', ') })), ratioOf(ratio), refs[0] ? annotated(refs[0]) : null, area)
+      return storyboardGraph(scenes.map((sc) => ({ ...sc, prompt: [stripMentions(sc.prompt), suffix].filter(Boolean).join(', ') })), ratioOf(ratio), vrefs[0] ? annotated(vrefs[0]) : null, area)
     }
     const mode = videoModeOf(shape)
-    if (mode === 'refs' && refs.length) return r2vGraph(refs.map((src) => ({ file: annotated(src), kind: refKind(src) })), prompt, ratioOf(ratio), duration, area)
+    if (mode === 'refs') {
+      if (!vrefs.length) throw new Error(t('customWorkflows.needsAnyRef'))
+      return r2vGraph(vrefs.map((src) => ({ file: annotated(src), kind: refKind(src) })), prompt, ratioOf(ratio), duration, area, workflow)
+    }
     const motion = motionOf(shape)
-    if (mode === 'motion' && refs[0] && motion) return motionGraph(annotated(refs[0]), annotated(motion), prompt, ratioOf(ratio), duration, area)
+    if (mode === 'motion' && vrefs[0] && motion) return motionGraph(annotated(vrefs[0]), annotated(motion), prompt, ratioOf(ratio), duration, area)
     const speech = speechOf(shape)
     if (mode === 'lipsync' && refs[0] && speech) {
       const { seconds } = await mediaMeta(speech, 'audio')
-      return lipSyncGraph(annotated(refs[0]), annotated(speech), prompt, ratioOf(ratio), Math.min(seconds, H3_MAX_SECONDS), area)
+      return lipSyncGraph(annotated(vrefs[0]), annotated(speech), prompt, ratioOf(ratio), Math.min(seconds, H3_MAX_SECONDS), area)
     }
     const last = lastFrameOf(shape)
-    return refs.length || last
-      ? imageToVideoGraph(refs[0] ? annotated(refs[0]) : null, prompt, ratioOf(ratio), duration, last ? annotated(last) : null, area)
+    return vrefs.length || last
+      ? imageToVideoGraph(vrefs[0] ? annotated(vrefs[0]) : null, prompt, ratioOf(ratio), duration, last ? annotated(last) : null, area)
       : t2vGraph(prompt, ratioOf(ratio), duration, area)
   }
   const [width, height] = targetSize(shape.props)
@@ -213,7 +220,7 @@ async function generateGraph(shape: GeneratorShape): Promise<Built> {
 
 export function generate(editor: Editor, shape: GeneratorShape, onError: ErrorSink) {
   const kind = isVideo(shape.props.workflow) ? 'video' : 'image'
-  const name = shape.props.prompt || scenesOf(shape)[0]?.prompt || ''
+  const name = stripMentions(shape.props.prompt || scenesOf(shape)[0]?.prompt || '')
   const seed = seedOf(shape) ?? randomSeed()
   const built = generateGraph(shape).then((b) => { applySeed(b.graph, seed); return b })
   return startJob(editor, shape.id, built, { name: name.slice(0, 32), kind, extra: { seed }, runOn: runOnOf(shape) }, onError)

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSnapshot, Tldraw, useValue, type Editor, type TLAssetStore, type TLComponents, type TLShape } from 'tldraw'
 import 'tldraw/tldraw.css'
 
-import { isViewUrl, thumbSize, thumbUrl, uploadImage, viewUrl } from './comfy'
+import { isViewUrl, MAX_ASSET_SIZE, thumbSize, thumbUrl, uploadImage, viewUrl } from './comfy'
 import { svgRaster } from './vectorize'
 import { errorText, resumeJobs } from './jobs'
 import './layers'
@@ -12,6 +12,7 @@ import { loadMemory } from './memory'
 import { loadInstances } from './instances'
 import { loadModels } from './models'
 import { loadWorkflowConfig } from './customWorkflows'
+import { loadVideoRefSlots } from './refSlots'
 import { loadProject, NEW_PARAM } from './projects'
 import { startAutosave } from './autosave'
 import { takeHandoff } from './home/handoff'
@@ -145,7 +146,7 @@ export function App({ id }: { id: string }) {
   }, [editor, dark])
 
   useEffect(() => {
-    void Promise.all([loadMemory(), loadWorkflowConfig(), loadModels(), loadNotices(), loadInstances()]).catch((e) => setError(String(e)))
+    void Promise.all([loadMemory(), loadWorkflowConfig().then(loadVideoRefSlots), loadModels(), loadNotices(), loadInstances()]).catch((e) => setError(String(e)))
   }, [])
 
   const onMount = useCallback((ed: Editor) => {
@@ -251,6 +252,7 @@ export function App({ id }: { id: string }) {
             <Tldraw
               assets={assets}
               assetUrls={assetUrls}
+              maxAssetSize={MAX_ASSET_SIZE}
               shapeUtils={shapeUtils}
               tools={tools}
               components={components}
