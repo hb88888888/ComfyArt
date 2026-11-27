@@ -26,13 +26,28 @@
           var t = e && e.target
           if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && (t.src || t.href)) reloadOnce()
         }, true)
+        // Even without a 404, a tab opened before an update keeps running the old
+        // JS in memory. Detect a changed build entry silently and refresh once.
+        var entry = document.querySelector('script[type="module"]')
+        var current = entry && entry.src
+        if (current) {
+          setInterval(function () {
+            fetch(location.pathname + '?ca-ver=' + Date.now(), { cache: 'no-store' })
+              .then(function (r) { return r.text() })
+              .then(function (html) {
+                var m = html.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/)
+                if (m && new URL(m[1], location.href).href !== current) reloadOnce()
+              })
+              .catch(function () { })
+          }, 60000)
+        }
       })()
     </script>
-    <script type="module" crossorigin src="/comfyart/assets/index-Br5zJ66d.js"></script>
+    <script type="module" crossorigin src="/comfyart/assets/index-DJH-fH3K.js"></script>
     <link rel="modulepreload" crossorigin href="/comfyart/assets/rolldown-runtime-pP25SEvz.js">
     <link rel="modulepreload" crossorigin href="/comfyart/assets/preload-helper-Q51xa8B4.js">
     <link rel="modulepreload" crossorigin href="/comfyart/assets/i18n-DJRtrOVz.js">
-    <link rel="stylesheet" crossorigin href="/comfyart/assets/index-C_LP3U-m.css">
+    <link rel="stylesheet" crossorigin href="/comfyart/assets/index-DCoD0gIi.css">
   </head>
   <body>
     <div id="root"></div>

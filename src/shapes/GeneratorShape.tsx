@@ -94,11 +94,9 @@ function GeneratorCard({ shape }: { shape: GeneratorShape }) {
   const progress = useValue('generator progress', () => (job ? progressAtom.get()[job.id] : undefined), [job?.id])
   const p = progress && progress.max > 0 ? Math.min(1, progress.value / progress.max) : 0
   const where = useValue('generator runs on', () => (job && instancesAtom.get().some((i) => i.enabled) ? runsOn(job.id) : null), [job?.id])
-  // The card lives in canvas space, so at a zoomed-out view a fixed-size button shrinks
-  // to a few visible pixels and cannot be found, let alone hit. Sizing it by 1/zoom keeps
-  // it a constant, unmissable size on screen no matter how far the canvas is zoomed.
-  const zoom = useValue('generator stop zoom', () => editor.getCamera().z, [editor])
-  const stopSize = Math.round(64 / Math.min(8, Math.max(0.05, zoom)))
+  // The card lives in canvas space. CSS scales the button by tldraw's own
+  // --tl-scale (1 / camera zoom), so its on-screen size stays 64px at every zoom
+  // without depending on React re-rendering when the camera moves.
   return (
     <HTMLContainer className="ca-gen-card" data-running={job ? true : undefined}>
       <span className="ca-gen-card__icon">{isVideo(shape.props.workflow) ? Icons.video : Icons.image}</span>
@@ -110,7 +108,6 @@ function GeneratorCard({ shape }: { shape: GeneratorShape }) {
           className="ca-gen-card__stop"
           title={t('jobs.stop')}
           disabled={job.stopping}
-          style={{ width: stopSize, height: stopSize, padding: Math.round(stopSize * 0.3), fontSize: Math.round(stopSize * 0.24) }}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => void stopJob(editor, shape.id).catch((e) => reportError(errorText(e)))}
         >{Icons.stop}</button>
