@@ -16,8 +16,8 @@ export function SelectionLabel() {
     if (shape.type === 'image' || shape.type === 'video') {
       const asset = shape.props.assetId ? editor.getAsset(shape.props.assetId) : null
       if (asset?.type !== shape.type) return null
-      const created = shape.meta.createdAt as number | undefined
-      return { name: asset.props.name || (shape.type === 'video' ? t('common.video') : t('common.image')), size: `${asset.props.w} × ${asset.props.h}`, video: shape.type === 'video', created }
+      const seconds = shape.meta.genSeconds as number | undefined
+      return { name: asset.props.name || (shape.type === 'video' ? t('common.video') : t('common.image')), size: `${asset.props.w} × ${asset.props.h}`, video: shape.type === 'video', seconds }
     }
     if (shape.type === GENERATOR) {
       const [w, h] = targetSize(shape.props)
@@ -28,15 +28,12 @@ export function SelectionLabel() {
   }, [editor])
   if (!rect || !info) return null
   return (
-    <>
-      <div className="ca-label" style={{ left: rect.l, top: rect.t - 22, width: rect.r - rect.l }}>
-        <span className="ca-label__icon">{info.video ? Icons.video : Icons.image}</span>
-        <span className="ca-label__name">{info.name}</span>
-        <span className="ca-label__size">{info.size}</span>
-      </div>
-      {typeof info.created === 'number' && (
-        <div className="ca-label ca-label__time" style={{ left: rect.r + 8, top: rect.t }}>{t('selectionLabel.createdAt', new Date(info.created).toLocaleString())}</div>
-      )}
-    </>
+    <div className="ca-label" style={{ left: rect.l, top: rect.t - 22, width: rect.r - rect.l }}>
+      <span className="ca-label__icon">{info.video ? Icons.video : Icons.image}</span>
+      <span className="ca-label__name">{info.name}</span>
+      <span className="ca-label__size">{info.size}</span>
+      {/* The run duration sits right after the resolution, in the top-right corner. */}
+      {typeof info.seconds === 'number' && <span className="ca-label__secs">{t('selectionLabel.ranFor', info.seconds)}</span>}
+    </div>
   )
 }

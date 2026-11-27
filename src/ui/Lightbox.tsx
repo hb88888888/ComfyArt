@@ -9,14 +9,14 @@ import { t } from '../i18n'
 
 export const lightboxAtom = atom<TLShapeId | null>('lightbox', null)
 
-interface Item { id: TLShapeId; src: string; name: string; video: boolean; created?: number }
+interface Item { id: TLShapeId; src: string; name: string; video: boolean; seconds?: number }
 
 function mediaItems(editor: Editor): Item[] {
   return editor.getCurrentPageShapesSorted().flatMap((s) => {
     const asset = mediaAsset(editor, s)
     if (!asset) return []
-    const created = s.meta.createdAt as number | undefined
-    return [{ id: s.id, src: asset.props.src, name: asset.props.name, video: asset.type === 'video', created }]
+    const seconds = s.meta.genSeconds as number | undefined
+    return [{ id: s.id, src: asset.props.src, name: asset.props.name, video: asset.type === 'video', seconds }]
   })
 }
 
@@ -82,7 +82,7 @@ export function Lightbox({ editor }: { editor: Editor }) {
         <button type="button" className="ca-bar__btn ca-bar__btn--icon" title={t('common.close')} onClick={() => lightboxAtom.set(null)}><span className="ca-icon">{Icons.close}</span></button>
       </div>
       <div className="ca-lightbox__count">{index + 1} / {items.length}</div>
-      {typeof item.created === 'number' && <div className="ca-lightbox__time">{t('selectionLabel.createdAt', new Date(item.created).toLocaleString())}</div>}
+      {typeof item.seconds === 'number' && <div className="ca-lightbox__time">{t('selectionLabel.ranFor', item.seconds)}</div>}
     </div>
   )
 }

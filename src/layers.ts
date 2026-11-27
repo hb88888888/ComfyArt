@@ -107,7 +107,8 @@ registerPlacer('replace', async (editor, holder, [m], job) => {
     props: { name: job.name, src: m.src, w: m.w, h: m.h, mimeType: 'image/png', isAnimated: false },
     meta: {},
   }])
-  editor.updateShape<TLImageShape>({ id: shape.id, type: 'image', props: { assetId }, meta: { ...shape.meta, job: null } })
+  const seconds = job.startedAt ? Math.max(1, Math.round((Date.now() - job.startedAt) / 1000)) : undefined
+  editor.updateShape<TLImageShape>({ id: shape.id, type: 'image', props: { assetId }, meta: { ...shape.meta, job: null, ...(seconds ? { genSeconds: seconds } : {}) } })
 })
 
 registerPlacer('layers', async (editor, holder, media, job, onError) => {

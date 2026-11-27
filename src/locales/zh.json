@@ -1004,7 +1004,7 @@
   "schedules.weekly": "每周",
   "selectionLabel.imageGenerator": "图像生成器",
   "selectionLabel.videoGenerator": "视频生成器",
-  "selectionLabel.createdAt": "生成于 {0}",
+  "selectionLabel.ranFor": "运行 {0}s",
   "settings.backend": "生成位置",
   "settings.backendCloud": "Comfy Cloud",
   "settings.backendLocal": "本机",

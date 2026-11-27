@@ -1004,7 +1004,7 @@
   "schedules.weekly": "Weekly",
   "selectionLabel.imageGenerator": "Image Generator",
   "selectionLabel.videoGenerator": "Video Generator",
-  "selectionLabel.createdAt": "Generated {0}",
+  "selectionLabel.ranFor": "Ran {0}s",
   "settings.backend": "Generate on",
   "settings.backendCloud": "Comfy Cloud",
   "settings.backendLocal": "This computer",

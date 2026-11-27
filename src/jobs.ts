@@ -16,6 +16,8 @@ export interface Job {
   extra?: Record<string, unknown>
   partial?: string[]
   stopping?: boolean
+  /** When the job was queued, so the result shapes can show how long it ran. */
+  startedAt?: number
 }
 
 export interface Media { ref: ImageRef; src: string; w: number; h: number; kind: MediaKind }
@@ -76,7 +78,7 @@ export function placeMedia(editor: Editor, m: Media, name: string, x: number, y:
     meta: {},
   } as any])
   const id = createShapeId()
-  editor.createShape({ id, type: m.kind, x, y, ...(parentId ? { parentId } : {}), props: { assetId, w, h: w * m.h / m.w }, meta: { createdAt: Date.now() } } as any)
+  editor.createShape({ id, type: m.kind, x, y, ...(parentId ? { parentId } : {}), props: { assetId, w, h: w * m.h / m.w } } as any)
   return id
 }
 
@@ -123,13 +125,14 @@ export function rowSpots(editor: Editor, holder: TLShape, sizes: [number, number
 const defaultPlacer: Placer = async (editor, holder, media, job) => {
   const w = (holder.props as { w: number }).w
   const gen = infoOf(holder, job)
+  const seconds = job.startedAt ? Math.max(1, Math.round((Date.now() - job.startedAt) / 1000)) : undefined
   const b = editor.getShapePageBounds(holder)!
   const ids: TLShapeId[] = []
   editor.run(() => {
     editor.deleteShape(holder.id)
     rowSpots(editor, holder, media.map((m) => [w, w * m.h / m.w]), [b.minX, b.minY]).forEach((p, i) => {
       const id = placeMedia(editor, media[i], job.name, p.x, p.y, w, holder.parentId)
-      editor.updateShape({ id, type: editor.getShape(id)!.type, meta: { gen: gen as any } })
+      editor.updateShape({ id, type: editor.getShape(id)!.type, meta: { gen: gen as any, ...(seconds ? { genSeconds: seconds } : {}) } })
       ids.push(id)
     })
   }, { history: 'ignore' })
@@ -209,6 +212,7 @@ export async function startJob(
     const job: Job = {
       id: await queuePrompt(graph, opts.runOn),
       node: result,
+      startedAt: Date.now(),
       ...(partial ? { partial } : {}),
       name: opts.name,
       kind: opts.kind ?? 'image',
