@@ -152,7 +152,26 @@ export function GenPanel({ onError }: { onError: (msg: string) => void }) {
   const strengths = refStrengthsOf(shape)
   const controls = refControlsOf(shape)
   const colors = colorsOf(shape)
-  const setMeta = (patch: Record<string, unknown>) => editor.updateShape<GeneratorShape>({ id: shape.id, type: shape.type, meta: { ...shape.meta, ...patch } as GeneratorShape['meta'] })
+  // tldraw validates every meta value as JSON. An `undefined` field (e.g. a missing
+  // refsWorkflow when switching video modes) throws ValidationError and kills the
+  // editor, so strip undefined values recursively before writing.
+  const setMeta = (patch: Record<string, unknown>) => {
+    const jsonSafe = (v: unknown): unknown => {
+      if (v === undefined) return undefined
+      if (Array.isArray(v)) return v.map(jsonSafe)
+      if (v && typeof v === 'object') {
+        const out: Record<string, unknown> = {}
+        for (const [k, val] of Object.entries(v)) {
+          const safe = jsonSafe(val)
+          if (safe !== undefined) out[k] = safe
+        }
+        return out
+      }
+      return v
+    }
+    const clean = jsonSafe(patch) as Record<string, unknown>
+    editor.updateShape<GeneratorShape>({ id: shape.id, type: shape.type, meta: { ...shape.meta, ...clean } as GeneratorShape['meta'] })
+  }
   // Removing a thumbnail drops it from the current tab only; the other tabs keep theirs.
   const setRefs = (next: string[]) => setMeta({ refs: next })
   const setColors = (next: string[]) => setMeta({ colors: next })
