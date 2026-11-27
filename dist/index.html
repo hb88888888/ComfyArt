@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ComfyArt</title>
+    <script>
+      // A tab left open across an update keeps asking for chunks from the old build;
+      // those 404 and the app dies at its first dynamic import ("Something went
+      // wrong"). Reload once instead — the fresh page load picks up the new build.
+      // Rate-limited to one auto-reload per 5 minutes so a truly broken state can
+      // still reach the error screen instead of looping forever.
+      (function () {
+        var reloadOnce = function () {
+          var last = 0
+          try { last = Number(sessionStorage.getItem('ca-chunk-reload') || 0) } catch (e) { }
+          if (Date.now() - last < 5 * 60 * 1000) return
+          try { sessionStorage.setItem('ca-chunk-reload', String(Date.now())) } catch (e) { }
+          location.reload()
+        }
+        window.addEventListener('unhandledrejection', function (e) {
+          var m = e && e.reason && e.reason.message ? String(e.reason.message) : String(e && e.reason)
+          if (/dynamically imported|module script|failed to fetch/i.test(m)) reloadOnce()
+        })
+        window.addEventListener('error', function (e) {
+          var t = e && e.target
+          if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && (t.src || t.href)) reloadOnce()
+        }, true)
+      })()
+    </script>
     <script type="module" crossorigin src="/comfyart/assets/index-CJr1qeeB.js"></script>
     <link rel="modulepreload" crossorigin href="/comfyart/assets/rolldown-runtime-pP25SEvz.js">
     <link rel="modulepreload" crossorigin href="/comfyart/assets/preload-helper-Q51xa8B4.js">
