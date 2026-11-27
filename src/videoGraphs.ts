@@ -41,7 +41,17 @@ export async function upscaleVideoGraph(video: string, w: number, h: number, lon
 
 const snap32 = (v: number) => Math.max(32, Math.round(v / 32) * 32)
 // Draft tiers first: 360p / 480p are the sizes the H3 two-step draft workflows are tuned for.
-export const VIDEO_AREAS: Record<string, number> = { '360p': 360 * 640, '480p': 480 * 864, '768p': 1344 * 768, '1080p': 1920 * 1088 }
+// 720p / 840p / 960p are intermediate tiers (short side p, 16:9 long side snapped to 32),
+// kept in ascending order of pixel area so the panel chips stay monotonic.
+export const VIDEO_AREAS: Record<string, number> = {
+  '360p': 360 * 640,
+  '480p': 480 * 864,
+  '720p': 720 * 1280,
+  '768p': 1344 * 768,
+  '840p': 840 * 1504,
+  '960p': 960 * 1696,
+  '1080p': 1920 * 1088,
+}
 export const DEFAULT_VIDEO_RESOLUTION = '768p'
 const H3_AREA = VIDEO_AREAS[DEFAULT_VIDEO_RESOLUTION]
 

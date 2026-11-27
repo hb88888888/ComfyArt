@@ -22,4 +22,4 @@ export const VIDEO_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
 export const DURATIONS = [5, 10, 15]
 export const DURATION_MIN = 5
 export const DURATION_MAX = 15
-export const VIDEO_RESOLUTIONS = ['360p', '480p', '768p', '1080p'].filter((r) => r in VIDEO_AREAS)
+export const VIDEO_RESOLUTIONS = ['360p', '480p', '720p', '768p', '840p', '960p', '1080p'].filter((r) => r in VIDEO_AREAS)
