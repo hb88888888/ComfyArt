@@ -94,9 +94,6 @@ function GeneratorCard({ shape }: { shape: GeneratorShape }) {
   const progress = useValue('generator progress', () => (job ? progressAtom.get()[job.id] : undefined), [job?.id])
   const p = progress && progress.max > 0 ? Math.min(1, progress.value / progress.max) : 0
   const where = useValue('generator runs on', () => (job && instancesAtom.get().some((i) => i.enabled) ? runsOn(job.id) : null), [job?.id])
-  // The card lives in canvas space. CSS scales the button by tldraw's own
-  // --tl-scale (1 / camera zoom), so its on-screen size stays 64px at every zoom
-  // without depending on React re-rendering when the camera moves.
   return (
     <HTMLContainer className="ca-gen-card" data-running={job ? true : undefined}>
       <span className="ca-gen-card__icon">{isVideo(shape.props.workflow) ? Icons.video : Icons.image}</span>
